@@ -37,7 +37,7 @@ class BufferParser
     /**
      * @var int requested QoS in subscribe
      */
-    private $requestQos;
+    private $requestSubscribeQos;
     /**
      * @var string message body
      */
@@ -62,6 +62,7 @@ class BufferParser
 
     function __construct(string $buffer)
     {
+
         $this->buffer = $buffer;
         $this->decodeFixedHeader();
         switch ($this->command){
@@ -71,6 +72,14 @@ class BufferParser
             }
             case self::PUBLISH:{
                 $this->decodePublish();
+                break;
+            }
+            case self::SUBSCRIBE:{
+                $this->packetId = $this->bufferPop(0, 2);
+                $this->topic = $this->bufferPop();
+                $this->requestSubscribeQos = ord($this->bufferPop());
+                $payload = chr($this->requestSubscribeQos);
+                var_dump($this->packetId,$this->topic,$this->requestSubscribeQos,$payload);
                 break;
             }
             case self::DISCONNECT:{
@@ -234,17 +243,17 @@ class BufferParser
     /**
      * @return int
      */
-    public function getRequestQos(): int
+    public function getRequestSubscribeQos(): int
     {
-        return $this->requestQos;
+        return $this->requestSubscribeQos;
     }
 
     /**
-     * @param int $requestQos
+     * @param int $requestSubscribeQos
      */
-    public function setRequestQos(int $requestQos): void
+    public function setRequestSubscribeQos(int $requestSubscribeQos): void
     {
-        $this->requestQos = $requestQos;
+        $this->requestSubscribeQos = $requestSubscribeQos;
     }
 
     /**
