@@ -4,17 +4,10 @@
 namespace EasySwoole\Mqtt\Protocol\Reply;
 
 
-class PubRec
+class PubRec extends Reply
 {
-    /** Qos 2的时候使用 */
-    private $packetId;
-    function __construct($packetId)
-    {
-        $this->packetId = $packetId;
-    }
-
     function __toString()
     {
-        return chr(0x50) . chr(0x02) . $this->packetId;
+        return chr(0x62) . chr(0x02) . $this->parser->getPacketId();
     }
 }

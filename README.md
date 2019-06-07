@@ -1,7 +1,5 @@
 ## 测试服务端
 ```
-require_once 'vendor/autoload.php';
-
 
 $server = new swoole_server("127.0.0.1", 9600);
 
@@ -14,18 +12,17 @@ $server->on('receive', function ($server, $fd, $reactor_id, $data) {
     $reply = null;
     if($parser->getCommand() == $parser::CONNECT){
         $reply = (string)(new \EasySwoole\Mqtt\Protocol\Reply\ConAck());
-
     }else if($parser->getCommand() == $parser::PUBLISH){
 //        $parser::printStr($data);
         if($parser->getQos() == 1){
-            $reply = new \EasySwoole\Mqtt\Protocol\Reply\PubAck($parser->getPacketId());
+            $reply = new \EasySwoole\Mqtt\Protocol\Reply\PubAck($parser);
         }else if($parser->getQos() == 2){
-            $reply = new \EasySwoole\Mqtt\Protocol\Reply\PubRec($parser->getPacketId());
+            $reply = new \EasySwoole\Mqtt\Protocol\Reply\PubRec($parser);
         }
-        var_dump($parser);
     }else{
-        var_dump($parser->getCommand());
+        var_dump($parser->toArray());
     }
+
     if($reply){
         $server->send($fd,$reply);
     }

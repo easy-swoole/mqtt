@@ -4,7 +4,7 @@
 namespace EasySwoole\Mqtt\Protocol\Reply;
 
 
-class ConAck
+class ConAck extends Reply
 {
     const ACCEPT = 0x00;
     const REFUSE_PROTOCOL = 0x01;
@@ -13,15 +13,15 @@ class ConAck
     const REFUSE_AUTH_FAIL = 0x04;
     const REFUSE_NOT_AUTH = 0x05;
 
-    private $ret;
+    private $flag = self::ACCEPT;
 
-    function __construct($flag = self::ACCEPT)
+    function setFlag($flag)
     {
-        $this->ret = chr(0x20) . chr(0x02) . chr(0) . chr($flag);
+        $this->flag = $flag;
     }
 
     function __toString()
     {
-       return $this->ret;
+       return chr(0x20) . chr(0x02) . chr(0) . chr($this->flag);
     }
 }

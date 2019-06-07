@@ -4,7 +4,9 @@
 namespace EasySwoole\Mqtt\Protocol;
 
 
-class BufferParser
+use EasySwoole\Spl\SplBean;
+
+class BufferParser extends SplBean
 {
     //值1 	C->S 	客户端请求与服务端建立连接
     const CONNECT = 1;
@@ -23,37 +25,42 @@ class BufferParser
     const PINGRESP = 13;
     const DISCONNECT = 14;
 
-    private $command;
+    protected $command;
 
-    private $qos;
+    protected $qos;
     /**
      * @var string topic
      */
-    private $topic;
+    protected $topic;
     /**
      * @var int retain
      */
-    private $retain;
+    protected $retain;
     /**
      * @var int requested QoS in subscribe
      */
-    private $requestSubscribeQos;
+    protected $requestSubscribeQos;
     /**
      * @var string message body
      */
-    private $payload;
+    protected $payload;
     /**
      * @var int packet identifier
      */
-    private $packetId;
+    protected $packetId;
     /**
      * @var int remaining length
      */
-    private $remainLen;
+    protected $remainLen;
     /**
      * @var array connect info
      */
-    private $connectInfo = [];
+    protected $connectInfo = [];
+    /*
+     * dup flag
+     */
+    protected $dup;
+
     /**
      * @var string buffer
      */
@@ -62,7 +69,7 @@ class BufferParser
 
     function __construct(string $buffer)
     {
-
+        parent::__construct([]);
         $this->buffer = $buffer;
         $this->decodeFixedHeader();
         switch ($this->command){
@@ -74,24 +81,69 @@ class BufferParser
                 $this->decodePublish();
                 break;
             }
-            case self::SUBSCRIBE:{
-                $this->packetId = $this->bufferPop(0, 2);
-                $this->topic = $this->bufferPop();
-                $this->requestSubscribeQos = ord($this->bufferPop());
-                $payload = chr($this->requestSubscribeQos);
-                var_dump($this->packetId,$this->topic,$this->requestSubscribeQos,$payload);
+
+            case self::PUBACK:{
+                $this->decodePubAck();
                 break;
             }
+
+            case self::PUBREC:{
+                $this->decodePubRec();
+                break;
+            }
+
+            case self::PUBREL:{
+                $this->decodePubRel();
+                break;
+            }
+
+            case self::PUBCOMP:{
+                $this->decodePubComp();
+                break;
+            }
+
+            case self::SUBSCRIBE:{
+                $this->decodeSubscribe();
+                break;
+            }
+
+            case self::UNSUBSCRIBE:{
+                $this->decodeUnSubscribe();
+                break;
+            }
+
+            case self::PINGREQ:{
+                break;
+            }
+
             case self::DISCONNECT:{
                 //not action
                 break;
             }
+
             default:{
-                var_dump($this->command);
+
             }
         }
     }
 
+    /*
+     * 解析固定头
+     */
+    private function decodeFixedHeader()
+    {
+        $byte = $this->bufferPop(0);
+        $byte = ord($byte);
+        $this->command = ($byte & 0xF0) >> 4;
+        $this->dup = ($byte & 0x08) >> 3;
+        $this->qos = ($byte & 0x06) >> 1;
+        $this->retain = $byte & 0x01;
+        $this->remainLen = $this->getRemainBufferLen();
+    }
+
+    /*
+     * 解析连接请求
+     */
     private function decodeConnect()
     {
         $info = [];
@@ -124,6 +176,44 @@ class BufferParser
         $this->payload = $this->buffer;
     }
 
+    private function decodePubAck()
+    {
+        $this->packetId = $this->bufferPop(0, 2);
+    }
+
+    private function decodePubRec()
+    {
+        $this->packetId = $this->bufferPop(0, 2);
+    }
+
+    private function decodePubRel()
+    {
+        $this->packetId = $this->bufferPop(0, 2);
+    }
+
+    private function decodePubComp()
+    {
+        $this->packetId = $this->bufferPop(0, 2);
+    }
+
+    private function decodeSubscribe()
+    {
+        $this->packetId = $this->bufferPop(0, 2);
+        $this->topic = $this->bufferPop();
+        $this->requestSubscribeQos = ord($this->bufferPop());
+    }
+
+    private function decodeUnSubscribe()
+    {
+        $this->packetId = $this->bufferPop(0, 2);
+        $this->topic = $this->bufferPop();
+    }
+
+    private function decodePingReq()
+    {
+
+    }
+
     private function bufferPop($flag = 1, $len = 1):string
     {
         if ($flag === 1) {
@@ -137,18 +227,7 @@ class BufferParser
         return $matches[1];
     }
 
-    /*
-     * 解析固定头
-     */
-    private function decodeFixedHeader()
-    {
-        $byte = $this->bufferPop(0);
-        $byte = ord($byte);
-        $this->command = ($byte & 0xF0) >> 4;
-        $this->qos = ($byte & 0x06) >> 1;
-        $this->retain = $byte & 0x01;
-        $this->remainLen = $this->getRemainBufferLen();
-    }
+
 
     private function getRemainBufferLen():int
     {
@@ -161,19 +240,6 @@ class BufferParser
             $multiplier *= 128;
         } while (($encodedByte & 128) != 0);
         return $value;
-    }
-
-    public static function printStr($string)
-    {
-        $strlen = strlen($string);
-        for ($j = 0; $j < $strlen; $j++) {
-            $num = ord($string{$j});
-            if ($num > 31)
-                $chr = $string{$j};
-            else
-                $chr = " ";
-            printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
-        }
     }
 
     /**
@@ -302,5 +368,31 @@ class BufferParser
     public function setConnectInfo(array $connectInfo): void
     {
         $this->connectInfo = $connectInfo;
+    }
+
+    public static function byteToBit(string $byte)
+    {
+        $bin = decbin(ord($byte));
+        $bin = str_pad($bin, 8, 0, STR_PAD_LEFT);
+        $ret = [];
+        $i = 7;
+        while ($i >= 0){
+            $ret[7-$i] = (int)$bin[$i];
+            $i--;
+        }
+        return $ret;
+    }
+
+    public static function printStr($string)
+    {
+        $strlen = strlen($string);
+        for ($j = 0; $j < $strlen; $j++) {
+            $num = ord($string{$j});
+            if ($num > 31)
+                $chr = $string{$j};
+            else
+                $chr = " ";
+            printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
+        }
     }
 }

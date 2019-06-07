@@ -4,17 +4,19 @@
 namespace EasySwoole\Mqtt\Protocol\Reply;
 
 
-class PubAck
+use EasySwoole\Mqtt\Protocol\BufferParser;
+
+class PubAck extends Reply
 {
-    /** Qos 1的时候使用 */
-    private $packetId;
-    function __construct($packetId)
-    {
-        $this->packetId = $packetId;
-    }
 
     function __toString()
     {
-        return chr(0x40) . chr(0x02) . $this->packetId;
+        if($this->parser->getQos() == 1){
+            return chr(0x40) . chr(0x02).$this->parser->getPacketId();
+        }else if($this->parser->getQos() == 2){
+            return chr(0x50) . chr(0x02).$this->parser->getPacketId();
+        }else{
+            return '';
+        }
     }
 }
