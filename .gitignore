@@ -1,0 +1,14 @@
+/vendor
+.env
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+.idea
+*/.DS_Store
+.DS_Store
+.user.ini
+_ide_helper.php
+/swoole-mqtt
+/composer.lock
