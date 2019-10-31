@@ -370,11 +370,18 @@ class BufferParser extends SplBean
     }
 
     /**
-     * @return array
+     * 获取连接会话信息
+     * @param null $key
+     * @return array|mixed|null
      */
-    public function getConnectInfo(): array
+    public function getConnectInfo($key = null)
     {
+        if($key) {
+            return $this->connectInfo[$key] ?? null;
+        }
         return $this->connectInfo;
+
+
     }
 
     /**

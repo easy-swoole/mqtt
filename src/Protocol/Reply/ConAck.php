@@ -3,7 +3,10 @@
 
 namespace EasySwoole\Mqtt\Protocol\Reply;
 
-
+/**
+ * 连接确认
+ * @package EasySwoole\Mqtt\Protocol\Reply
+ */
 class ConAck extends Reply
 {
     const ACCEPT = 0x00;
@@ -15,13 +18,42 @@ class ConAck extends Reply
 
     private $flag = self::ACCEPT;
 
+    /**
+     * 连接确认
+     * todo 会话保持记录协议功能实现
+     * @var integer
+     */
+    private $connectConfirm = 0x01;
+
+    /**
+     * 设置连接返回码
+     *
+     * todo 连接检测
+     * @param $flag
+     * @return $this
+     */
     function setFlag($flag)
     {
         $this->flag = $flag;
+
+        return $this;
+    }
+
+    /**
+     * 清理回话记录(不将历史未读消息推送回去)
+     * todo 清理会话协议功能实现
+     */
+    function cleanSession()
+    {
+        $this->connectConfirm = 0x00;
+
+        return $this;
     }
 
     function __toString()
     {
-       return chr(0x20) . chr(0x02) . chr(0) . chr($this->flag);
+       return chr(0x20) . chr(0x02) //固定报头
+           . chr($this->connectConfirm) //连接确认标志 位7-1是保留位且必须设置为0
+           . chr($this->flag); //连接返回码
     }
 }
