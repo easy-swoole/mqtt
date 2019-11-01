@@ -4,9 +4,10 @@
 namespace EasySwoole\Mqtt\Protocol;
 
 
+use EasySwoole\Mqtt\Protocol\Face\ParseInterface;
 use EasySwoole\Spl\SplBean;
 
-class BufferParser extends SplBean
+class BufferParser extends SplBean implements ParseInterface
 {
     /*
      * 名字 	值 	流向 	描述
@@ -81,65 +82,67 @@ class BufferParser extends SplBean
      */
     private $buffer;
 
+    private $error;
+
 
     function __construct(string $buffer)
     {
         parent::__construct([]);
         $this->buffer = $buffer;
         $this->decodeFixedHeader();
-        switch ($this->command){
-            case self::CONNECT:{
-                $this->decodeConnect();
-                break;
-            }
-            case self::PUBLISH:{
-                $this->decodePublish();
-                break;
-            }
-
-            case self::PUBACK:{
-                $this->decodePubAck();
-                break;
-            }
-
-            case self::PUBREC:{
-                $this->decodePubRec();
-                break;
-            }
-
-            case self::PUBREL:{
-                $this->decodePubRel();
-                break;
-            }
-
-            case self::PUBCOMP:{
-                $this->decodePubComp();
-                break;
-            }
-
-            case self::SUBSCRIBE:{
-                $this->decodeSubscribe();
-                break;
-            }
-
-            case self::UNSUBSCRIBE:{
-                $this->decodeUnSubscribe();
-                break;
-            }
-
-            case self::PINGREQ:{
-                break;
-            }
-
-            case self::DISCONNECT:{
-                //not action
-                break;
-            }
-
-            default:{
-
-            }
-        }
+//        switch ($this->command){
+//            case self::CONNECT:{
+//                $this->decodeConnect();
+//                break;
+//            }
+//            case self::PUBLISH:{
+//                $this->decodePublish();
+//                break;
+//            }
+//
+//            case self::PUBACK:{
+//                $this->decodePubAck();
+//                break;
+//            }
+//
+//            case self::PUBREC:{
+//                $this->decodePubRec();
+//                break;
+//            }
+//
+//            case self::PUBREL:{
+//                $this->decodePubRel();
+//                break;
+//            }
+//
+//            case self::PUBCOMP:{
+//                $this->decodePubComp();
+//                break;
+//            }
+//
+//            case self::SUBSCRIBE:{
+//                $this->decodeSubscribe();
+//                break;
+//            }
+//
+//            case self::UNSUBSCRIBE:{
+//                $this->decodeUnSubscribe();
+//                break;
+//            }
+//
+//            case self::PINGREQ:{
+//                break;
+//            }
+//
+//            case self::DISCONNECT:{
+//                //not action
+//                break;
+//            }
+//
+//            default:{
+//
+//            }
+//        }
     }
 
     /*
@@ -257,6 +260,10 @@ class BufferParser extends SplBean
         return $value;
     }
 
+    public function getError() : bool
+    {
+        return $this->error;
+    }
     /**
      * @return mixed
      */

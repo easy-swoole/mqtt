@@ -26,9 +26,8 @@ class ConAck extends Reply
     private $connectConfirm = 0x01;
 
     /**
-     * 设置连接返回码
+     * 设置连接返回状态
      *
-     * todo 连接检测
      * @param $flag
      * @return $this
      */
