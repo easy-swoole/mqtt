@@ -4,17 +4,32 @@
 namespace EasySwoole\Mqtt\Protocol;
 
 
+use EasySwoole\Mqtt\Protocol\CacheDrive\RedisDrive;
+use EasySwoole\Mqtt\Protocol\Controller\Message;
 use EasySwoole\Mqtt\Protocol\Event\DefaultEvent\ConnectToServerEvent;
 use EasySwoole\Mqtt\Protocol\Event\MessageServerEvent;
-use EasySwoole\Mqtt\Protocol\Message;
-use EasySwoole\Mqtt\Protocol\Reply\ConAck;
+use EasySwoole\Mqtt\Protocol\Face\Cache;
+use EasySwoole\Mqtt\Protocol\Inherit\Singleton;
 
 class MqttServerEvent
 {
-    private static $instance;
-
+    use Singleton;
+    /**
+     * swoole server
+     * @var
+     */
     private $server;
 
+    /**
+     * 消息事件
+     * @var MessageServerEvent
+     */
+    protected $messageServerEvent;
+
+    /**
+     * 消息类型对应不同的事件
+     * @var array
+     */
     private $on = [
         'connectToServer' => ConnectToServerEvent::class,
         'confirmConnectionRequest' => '',
@@ -32,29 +47,16 @@ class MqttServerEvent
         'disconnect' => '',
     ];
 
-    /**
-     * 获取单例, 服务端只能存在一个
-     * @param $port
-     * @return MqttServerEvent
-     */
-    static function getInstance()
-    {
-        if(!isset(self::$instance)){
-            self::$instance = new static();
-        }
-        return self::$instance;
-    }
+    private $cacheDrive = RedisDrive::class;
 
-    /**
-     * MqttServerEvent constructor.
-     * @param mixed $port
-     */
-    public function init($server)
+
+    private function __construct($server)
     {
         if($this->server !== null) {
             return $this;
         }
         $this->server = $server;
+        $this->messageServerEvent = MessageServerEvent::getInstance();
         $this->initSetConf();
         $this->initSetOn();
 
@@ -69,7 +71,6 @@ class MqttServerEvent
         $this->getServer()->set(
             [
                 'open_mqtt_protocol' => true,
-                'dispatch_mode' => 2,
             ]
         );
     }
@@ -79,20 +80,24 @@ class MqttServerEvent
         return $this->server;
     }
 
+    /**
+     * 初始化事件
+     * todo 事件同用户自定义事件同时初始化
+     */
     private function initSetOn()
     {
-        $this->getServer()->on('Connect', function (...$arg) {
-            $this->onConnect(...$arg);
+        $this->getServer()->on('Connect', function (\swoole_server $server, int $fd, int $reactorId) {
+            $this->onConnect($server,  $fd, $reactorId);
         });
-        $this->getServer()->on('close', function (...$arg) {
-            $this->onClose(...$arg);
+        $this->getServer()->on('close', function (\swoole_server $server, int $fd, int $reactorId) {
+            $this->onClose($server,  $fd, $reactorId);
         });
-        $this->getServer()->on('Receive', function (...$arg) {
-            $this->onReceive(...$arg);
+        $this->getServer()->on('Receive', function (\swoole_server $server, int $fd, int $reactor_id, string $data) {
+            $this->onReceive($server, $fd, $reactor_id, $data);
         });
     }
 
-    private function onConnect($server, $fd, $reactor_id)
+    private function onConnect($server,  $fd, $reactorId)
     {
         echo "fd:{$fd} 已连接\n";
     }
@@ -105,66 +110,64 @@ class MqttServerEvent
      * @param int $from_id
      * @param $data
      */
-    private function onReceive($server, int $fd, int $from_id, $data ) {
+    private function onReceive(\swoole_server $server, int $fd, int $reactor_id, string $data) {
         $message = new Message($data);
-        $command = $message->getCommand();
 
-        switch ($command) {
+        switch ($message->getCommand()) {
             case $message::CONNECT:
                 {
-                    $messageServerEvent = MessageServerEvent::getInstance();
-                    $eventObj = $this->getOn('connectToServer');
-                    //连接标志检测
+                    $message->decodeConnect();
+                    $messageServerEvent = $this->getMessageServerEvent();
+                    $reply = $messageServerEvent->connectToServer($message, $this->getOn('connectToServer'), $fd);
+                    $server->send($fd, $reply);
 
-                    $reply = $messageServerEvent->connectToServer($message, $eventObj);
-
-                    $server->send($reply);
                     break;
                 }
             case $message::PUBLISH:
                 {
-                    $this->decodePublish();
+                    $message->decodePublish();
                     break;
                 }
 
             case $message::PUBACK:
                 {
-                    $this->decodePubAck();
+                    $message->decodePubAck();
                     break;
                 }
 
             case $message::PUBREC:
                 {
-                    $this->decodePubRec();
+                    $message->decodePubRec();
                     break;
                 }
 
             case $message::PUBREL:
                 {
-                    $this->decodePubRel();
+                    $message->decodePubRel();
                     break;
                 }
 
             case $message::PUBCOMP:
                 {
-                    $this->decodePubComp();
+                    $message->decodePubComp();
                     break;
                 }
 
             case $message::SUBSCRIBE:
                 {
-                    $this->decodeSubscribe();
+                    $message->decodeSubscribe();
                     break;
                 }
 
             case $message::UNSUBSCRIBE:
                 {
-                    $this->decodeUnSubscribe();
+                    $message->decodeUnSubscribe();
                     break;
                 }
 
             case $message::PINGREQ:
                 {
+                    $message->decodePingReq();
                     break;
                 }
 
@@ -182,7 +185,7 @@ class MqttServerEvent
     }
 
 
-    private function onClose($serv, $fd, $from_id) {
+    private function onClose($server,  $fd, $reactorId) {
         $this->debug("Client {$fd} close connection");
 //        $client_id = $this->redis_get("client_".$fd);
 //        $this->redis_delete("client_".$fd);
@@ -209,7 +212,7 @@ class MqttServerEvent
 
     /**
      * 注册 mqtt 事件
-     *
+     * todo 数组注册
      * @param $key string
      * @param $class  string
      * @return bool
@@ -239,6 +242,31 @@ class MqttServerEvent
         $objClass = $this->on[$key];
 
         return $objClass::getInstance();
+    }
+
+    /**
+     * @return MessageServerEvent
+     */
+    public function getMessageServerEvent()
+    {
+        return $this->messageServerEvent;
+    }
+
+    /**
+     * 设置默认的缓存驱动
+     * @param string $cacheDrive
+     * @return bool
+     */
+    public function setCacheDrive(string $cacheDrive)
+    {
+        if(!class_exists($cacheDrive)) {
+            return false;
+        }
+        if(!( $cacheDrive instanceof Cache)) {
+            return false;
+        }
+        $this->cacheDrive = $cacheDrive;
+        return true;
     }
 
 }

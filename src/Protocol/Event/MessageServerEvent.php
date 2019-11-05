@@ -4,9 +4,9 @@
 namespace EasySwoole\Mqtt\Protocol\Event;
 
 
+use EasySwoole\Mqtt\Protocol\Controller\Message;
 use EasySwoole\Mqtt\Protocol\Inherit\Event\AbstractConnectionServer;
 use EasySwoole\Mqtt\Protocol\Inherit\Singleton;
-use EasySwoole\Mqtt\Protocol\Message;
 use EasySwoole\Mqtt\Protocol\Reply\ConAck;
 
 class MessageServerEvent
@@ -17,18 +17,35 @@ class MessageServerEvent
      * 连接服务器
      * @param Message $message
      * @param AbstractConnectionServer $eventObj
-     * @return string
+     * @return string 回复内容
      */
-    public function connectToServer(Message $message, AbstractConnectionServer $eventObj)
+    public function connectToServer(Message $message, AbstractConnectionServer $eventObj, $fd)
     {
-
+        //会话存储
 
         //清理会话 检测
+        if($message->getConnectInfo('cleanSession') === 1) {
 
+        }
         //遗嘱标志
+        if($message->getConnectInfo('willFlag') === 1) {
 
-        //遗嘱QoS
-        //遗嘱保留
+            //遗嘱QoS
+            //遗嘱保留
+
+
+            //服务端检测到了一个I/O错误或者网络故障。
+            //客户端在保持连接（Keep Alive）的时间内未能通讯。
+            //客户端没有先发送DISCONNECT报文直接关闭了网络连接。
+            //由于协议错误服务端关闭了网络连接。
+            //准备遗嘱消息发布
+        }
+
+
+
+
+
+
 
         //用户名标志
 

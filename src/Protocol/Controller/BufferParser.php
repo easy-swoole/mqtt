@@ -1,7 +1,7 @@
 <?php
 
 
-namespace EasySwoole\Mqtt\Protocol;
+namespace EasySwoole\Mqtt\Protocol\Controller;
 
 
 use EasySwoole\Mqtt\Protocol\Face\ParseInterface;
@@ -9,38 +9,8 @@ use EasySwoole\Spl\SplBean;
 
 class BufferParser extends SplBean implements ParseInterface
 {
-    /*
-     * 名字 	值 	流向 	描述
-        CONNECT 	1 	C->S 	客户端请求与服务端建立连接
-        CONNACK 	2 	S->C 	服务端确认连接建立
-        PUBLISH 	3 	CóS 	发布消息
-        PUBACK 	4 	CóS 	收到发布消息确认
-        PUBREC 	5 	CóS 	发布消息收到
-        PUBREL 	6 	CóS 	发布消息释放
-        PUBCOMP 	7 	CóS 	发布消息完成
-        SUBSCRIBE 	8 	C->S 	订阅请求
-        SUBACK 	9 	S->C 	订阅确认
-        UNSUBSCRIBE 	10 	C->S 	取消订阅
-        UNSUBACK 	11 	S->C 	取消订阅确认
-        PING 	12 	C->S 	客户端发送PING(连接保活)命令
-        PINGRSP 	13 	S->C 	PING命令回复
-        DISCONNECT 	14 	C->S 	断开连接
-     */
-    const CONNECT = 1;
-    const CONNACK = 2;
-    const PUBLISH = 3;
-    const PUBACK = 4;
-    const PUBREC = 5;
-    const PUBREL = 6;
-    const PUBCOMP = 7;
-    const SUBSCRIBE = 8;
-    const SUBACK = 9;
-    const UNSUBSCRIBE = 10;
-    const UNSUBACK = 11;
-    const PINGREQ = 12;
-    const PINGRESP = 13;
-    const DISCONNECT = 14;
 
+    protected $byteHex;
     protected $command;
 
     protected $qos;
@@ -82,75 +52,26 @@ class BufferParser extends SplBean implements ParseInterface
      */
     private $buffer;
 
-    private $error;
+    private $errors = [];
 
 
     function __construct(string $buffer)
     {
         parent::__construct([]);
         $this->buffer = $buffer;
+        $byteHex  = bin2hex($buffer);
+        $this->byteHex = $byteHex;
         $this->decodeFixedHeader();
-//        switch ($this->command){
-//            case self::CONNECT:{
-//                $this->decodeConnect();
-//                break;
-//            }
-//            case self::PUBLISH:{
-//                $this->decodePublish();
-//                break;
-//            }
-//
-//            case self::PUBACK:{
-//                $this->decodePubAck();
-//                break;
-//            }
-//
-//            case self::PUBREC:{
-//                $this->decodePubRec();
-//                break;
-//            }
-//
-//            case self::PUBREL:{
-//                $this->decodePubRel();
-//                break;
-//            }
-//
-//            case self::PUBCOMP:{
-//                $this->decodePubComp();
-//                break;
-//            }
-//
-//            case self::SUBSCRIBE:{
-//                $this->decodeSubscribe();
-//                break;
-//            }
-//
-//            case self::UNSUBSCRIBE:{
-//                $this->decodeUnSubscribe();
-//                break;
-//            }
-//
-//            case self::PINGREQ:{
-//                break;
-//            }
-//
-//            case self::DISCONNECT:{
-//                //not action
-//                break;
-//            }
-//
-//            default:{
-//
-//            }
-//        }
     }
 
     /*
-     * 解析固定头
+     * 解析所有消息类型的固定头数据
+     *
      */
     private function decodeFixedHeader()
     {
         $byte = $this->bufferPop(0);
+        //ASCII  根据字符编码可能为多个 byte 只获取第一个为固定头
         $byte = ord($byte);
         $this->command = ($byte & 0xF0) >> 4;
         $this->dup = ($byte & 0x08) >> 3;
@@ -159,11 +80,32 @@ class BufferParser extends SplBean implements ParseInterface
         $this->remainLen = $this->getRemainBufferLen();
     }
 
-    /*
-     * 解析连接请求
-     */
-    private function decodeConnect()
+    public function debug($str,$title = "Debug")
     {
+        echo "-------------------------------\n";
+        echo '[' . time() . "] ".$title .':['. $str . "]\n";
+        echo "-------------------------------\n";
+    }
+
+    public function __destruct()
+    {
+        foreach ($this->errors as $value) {
+            echo $value;
+        }
+    }
+
+    public function errorInsert($data = '', $title = '错误')
+    {
+        $this->errors[] = '[' . time() . $title . ':' . PHP_EOL . $data . PHP_EOL . ']';
+    }
+
+
+    /*
+     * 解析连接服务端请求
+     */
+    public function decodeConnect()
+    {
+        $this->printStr($this->buffer);
         $info = [];
         $info['protocol'] = $this->bufferPop();
         $info['version'] = ord($this->bufferPop(0));
@@ -177,14 +119,23 @@ class BufferParser extends SplBean implements ParseInterface
         $keep_alive = $this->bufferPop(0, 2);
         $info['keepAlive'] = 256 * ord($keep_alive[0]) + ord($keep_alive[1]);
         $info['clientId'] = $this->bufferPop();
+        $info['willTopic'] = '';
+        $info['willMessage'] = '';
+        //遗嘱
+        if($info['willQos']) {
+            $info['willTopic'] = $this->bufferPop() ?: $this->errorInsert('遗嘱主题没有设置', 'willTopic');
+            $info['willMessage'] = $this->bufferPop() ?: $this->errorInsert('遗嘱信息没有设置', 'willMessage');
+        }
+        $info['username'] = '';
+        $info['password'] = '';
         if ($info['auth']) {
-            $info['username'] = $this->bufferPop();
-            $info['password'] = $this->bufferPop();
+            $info['username'] = $this->bufferPop() ?: $this->errorInsert('用户名没有设置', 'username');
+            $info['password'] = $this->bufferPop() ?: $this->errorInsert('密码没有设置', 'password');
         }
         $this->connectInfo = $info;
     }
 
-    private function decodePublish()
+    public function decodePublish()
     {
         $this->topic = $this->bufferPop();
         //仅单Qos不为0 的时候，需要PubAck或PubRec回复
@@ -194,58 +145,63 @@ class BufferParser extends SplBean implements ParseInterface
         $this->payload = $this->buffer;
     }
 
-    private function decodePubAck()
+    public function decodePubAck()
     {
         $this->packetId = $this->bufferPop(0, 2);
     }
 
-    private function decodePubRec()
+    public function decodePubRec()
     {
         $this->packetId = $this->bufferPop(0, 2);
     }
 
-    private function decodePubRel()
+    public function decodePubRel()
     {
         $this->packetId = $this->bufferPop(0, 2);
     }
 
-    private function decodePubComp()
+    public function decodePubComp()
     {
         $this->packetId = $this->bufferPop(0, 2);
     }
 
-    private function decodeSubscribe()
+    public function decodeSubscribe()
     {
         $this->packetId = $this->bufferPop(0, 2);
         $this->topic = $this->bufferPop();
         $this->requestSubscribeQos = ord($this->bufferPop());
     }
 
-    private function decodeUnSubscribe()
+    public function decodeUnSubscribe()
     {
         $this->packetId = $this->bufferPop(0, 2);
         $this->topic = $this->bufferPop();
     }
 
-    private function decodePingReq()
+    public function decodePingReq()
     {
 
     }
 
+    /**
+     * 获取 buffer 的内容
+     * @param int $flag 0为获取接下来两个字节显示的规定长度的内容, 1 为获取全部剩余  buffer
+     * @param int $len
+     * @return string
+     */
     private function bufferPop($flag = 1, $len = 1):string
     {
-        if ($flag === 1) {
-            $len = 256 * ord($this->bufferPop(0)) + ord($this->bufferPop(0));
+        $length = $len*2;
+        if ($flag === 1) { //获取接下来两个字节显示的规定长度的内容以及获取utf8字符
+            $length = (256 * ord($this->bufferPop(0)) + ord($this->bufferPop(0)))*2;
         }
-        if (strlen($this->buffer) < $len) {
+        if (strlen($this->byteHex) < $length) {
             return '';
         }
-        preg_match('/^([\x{00}-\x{ff}]{' . $len . '})([\x{00}-\x{ff}]*)$/s', $this->buffer, $matches);
-        $this->buffer = $matches[2];
-        return $matches[1];
+        $hex = mb_substr($this->byteHex, 0, $length);
+        $this->byteHex = mb_substr($this->byteHex, $length);
+        return pack('H*', $hex);
     }
-
-
 
     private function getRemainBufferLen():int
     {
@@ -379,12 +335,12 @@ class BufferParser extends SplBean implements ParseInterface
     /**
      * 获取连接会话信息
      * @param null $key
-     * @return array|mixed|null
+     * @return array|integer
      */
     public function getConnectInfo($key = null)
     {
         if($key) {
-            return $this->connectInfo[$key] ?? null;
+            return $this->connectInfo[$key] ?? 0;
         }
         return $this->connectInfo;
 
@@ -412,7 +368,7 @@ class BufferParser extends SplBean implements ParseInterface
         return $ret;
     }
 
-    public static function printStr($string)
+    public function printStr($string)
     {
         $strlen = strlen($string);
         for ($j = 0; $j < $strlen; $j++) {
@@ -422,6 +378,8 @@ class BufferParser extends SplBean implements ParseInterface
             else
                 $chr = " ";
             printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
+
         }
+        echo PHP_EOL . PHP_EOL;
     }
 }

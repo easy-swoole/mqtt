@@ -1,86 +1,95 @@
-## 开启服务端
-参考:https://www.easyswoole.com/Socket/tcp.html
-创建 tcp 服务
-并设置 swoole 中 `open_mqtt_protocol` 配置为 `true`
+# Easyswoole-Mqtt
 
-###  Easyswoole 已经开启`EASYSWOOLE_SERVER` 直接配置回调
-```php
-public static function mainServerCreate(EventRegister $register)
-{
-    $register->add($register::onReceive, function (\swoole_server $server, int $fd, int $reactor_id, string $data) {
-        echo "fd:{$fd} 发送消息:{$data}\n";
-    });
-}
+## 原生使用说明
+- 创建 tcp 服务
+- 设置 `swoole_server` 配置中 `open_mqtt_protocol` 配置为 `true`
+- 加入以下代码
+```php 
+use EasySwoole\Mqtt\Protocol\MqttServerEvent;
 
+
+/** @var \swoole_server $swooleSwoole */
+$mqttServerEvent = MqttServerEvent::getInstance($swooleSwoole);
 ```
-### 单独端口开启
 
-单独端口开启TCP服务器，需要添加子服务。
+##  Easyswoole 使用
 
-通过EasySwooleEvent.php文件的mainServerCreate 事件,进行子服务监听,例如:
+可在主服务创建事件中加入
 
+会自动配置服务 `open_mqtt_protocol` 为 `true`
 
 ```php
 public static function mainServerCreate(EventRegister $register)
 {
     $server = ServerManager::getInstance()->getSwooleServer();
+    $mqttServer = MqttServerEvent::getInstance($server);
+}
+```
 
-    $subPort1 = $server->addlistener('0.0.0.0', 9502, SWOOLE_TCP);
-    $subPort1->set(
-        [
-            'open_length_check' => false, //不验证数据包
-        ]
-    );
-    $subPort1->on('connect', function (\swoole_server $server, int $fd, int $reactor_id) {
-        echo "fd:{$fd} 已连接\n";
-        $str = '恭喜你连接成功';
-        $server->send($fd, $str);
-    });
-    $subPort1->on('close', function (\swoole_server $server, int $fd, int $reactor_id) {
-        echo "fd:{$fd} 已关闭\n";
-    });
-    $subPort1->on('receive', function (\swoole_server $server, int $fd, int $reactor_id, string $data) {
-        echo "fd:{$fd} 发送消息:{$data}\n";
-    });
+### 新端口开启
+
+单独端口开启TCP服务器，需要添加子服务。
+
+```php
+public static function mainServerCreate(EventRegister $register)
+{
+    $server = ServerManager::getInstance()->getSwooleServer();
+    $newServer = $server->addlistener('0.0.0.0', 9502, SWOOLE_TCP);
+    if($newServer === false) {
+        $errorCode = $newServer->getLastError(); //https://wiki.swoole.com/wiki/page/554.html
+    } else {
+        $mqttServer = MqttServerEvent::getInstance($newServer);
+    }
 }
 
 ```
 
-## 测试服务端
+## 事件注册
 
+```php
+/**
+ * 消息类型对应不同的事件
+ * @var array
+ */
+private $on = [
+    'connectToServer' => ConnectToServerEvent::class,
+    'confirmConnectionRequest' => '',
+    'partyMessage' => '',
+    'releaseConfirmation' => '',
+    'releaseReceiv' => '',
+    'releaseRelease' => '',
+    'releaseToComplete' => '',
+    'subscribeToTopic' => '',
+    'subscriptionConfirmation' => '',
+    'cancelSubscription' => '',
+    'cancelSubscriptionConfirmation' => '',
+    'heartRateRequest' => '',
+    'heartRateResponse' => '',
+    'disconnect' => '',
+];
 ```
 
-$server = new swoole_server("127.0.0.1", 9600);
+Mqtt 有不同事件,你可以在协议处理过程插入自定义处理事件. 
 
-$server->set([
-    'open_mqtt_protocol'=>true
-]);
-$server->on('receive', function ($server, $fd, $reactor_id, $data) {
+详细的处理事件需要继承并重写响应的抽象方法 `vendor/easyswoole/mqtt/src/Protocol/Inherit/Event`
 
-    $parser = new \EasySwoole\Mqtt\Protocol\BufferParser($data);
-    $reply = null;
-    if($parser->getCommand() == $parser::CONNECT){
-        $reply = (string)(new \EasySwoole\Mqtt\Protocol\Reply\ConAck());
-    }else if($parser->getCommand() == $parser::PUBLISH){
-//        $parser::printStr($data);
-        if($parser->getQos() == 1){
-            $reply = new \EasySwoole\Mqtt\Protocol\Reply\PubAck($parser);
-        }else if($parser->getQos() == 2){
-            $reply = new \EasySwoole\Mqtt\Protocol\Reply\PubRec($parser);
-        }
-    }else{
-        var_dump($parser->toArray());
-    }
+默认使用自带的抽象事件实现.
 
-    if($reply){
-        $server->send($fd,$reply);
-    }
+推荐在重写方法后在服务注册后通过 `on()` 方法更改事件
 
-});
-$server->on('close', function ($server, $fd) {
-    echo "connection close: {$fd}\n";
-});
-$server->start();
+```php
+$mqttServer->on('connectToServer', EasySwoole\Mqtt\Protocol\Event\DefaultEvent\ConnectToServerEvent::class);
 ```
+
+## 缓存驱动
+
+实现 `vendor/easyswoole/mqtt/src/Protocol/Face/Cache.php` 接口
+
+默认使用自提供驱动
+
+```php
+$mqttServerEvent->setCacheDrive(EasySwoole\Mqtt\Protocol\CacheDrive\RedisDrive::class);
+```
+
 ## 参考文献
 - https://mcxiaoke.gitbooks.io/mqtt-cn/content/mqtt/01-Introduction.html

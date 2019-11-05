@@ -1,19 +1,13 @@
 <?php
 
 
-namespace EasySwoole\Mqtt\Protocol;
-
-use EasySwoole\Mqtt\Protocol\Event\DefaultEvent\ConnectToServerEvent;
-use EasySwoole\Mqtt\Protocol\Event\MessageServerEvent;
-use EasySwoole\Mqtt\Protocol\Face\ParseInterface;
-use EasySwoole\Mqtt\Protocol\Inherit\Singleton;
-use EasySwoole\Mqtt\Protocol\Reply\ConAck;
+namespace EasySwoole\Mqtt\Protocol\Controller;
 
 /**
  * mqtt消息对象
  * @package EasySwoole\Mqtt\Protocol
  */
-class Message
+class Message extends BufferParser
 {
     /*
      * 名字 	值 	流向 	描述
@@ -59,28 +53,4 @@ class Message
      * @var int
      */
     protected $length = 0;
-
-    /**
-     * @var BufferParser
-     */
-    private $parse;
-
-    public function __construct($data)
-    {
-        $parse = $this->decodeMqtt($data);
-        $this->parse = $parse;
-    }
-
-    public function __call($name, $args) {
-        return $this->parse->$name(...$args);
-    }
-
-
-    public function decodeMqtt($data)
-    {
-        return new BufferParser($data);
-
-    }
-
-
 }

@@ -13,7 +13,11 @@
   ],
   "require": {
     "php": ">=7.1.0",
-    "easyswoole/spl": "^1.1"
+    "easyswoole/spl": "^1.1",
+    "ext-mbstring": "*"
+  },
+  "require-dev": {
+    "easyswoole/swoole-ide-helper": "^1.0"
   },
   "autoload": {
     "psr-4": {
