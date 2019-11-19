@@ -1,10 +1,8 @@
 <?php
 
 
-namespace EasySwoole\Mqtt\Protocol\Reply;
+namespace EasySwoole\MQTT\Protocol\Reply;
 
-
-use EasySwoole\Mqtt\Protocol\BufferParser;
 
 class PubAck extends Reply
 {

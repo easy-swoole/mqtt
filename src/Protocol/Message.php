@@ -1,12 +1,12 @@
 <?php
 
 
-namespace EasySwoole\Mqtt\Protocol;
+namespace EasySwoole\MQTT\Protocol;
 
 
 use EasySwoole\Spl\SplBean;
 
-class BufferParser extends SplBean
+class Message extends SplBean
 {
     /*
      * 名字 	值 	流向 	描述

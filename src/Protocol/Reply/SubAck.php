@@ -1,7 +1,7 @@
 <?php
 
 
-namespace EasySwoole\Mqtt\Protocol\Reply;
+namespace EasySwoole\MQTT\Protocol\Reply;
 
 
 class SubAck extends Reply

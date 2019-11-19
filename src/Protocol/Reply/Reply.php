@@ -1,15 +1,15 @@
 <?php
 
 
-namespace EasySwoole\Mqtt\Protocol\Reply;
+namespace EasySwoole\MQTT\Protocol\Reply;
 
 
-use EasySwoole\Mqtt\Protocol\BufferParser;
+use EasySwoole\Mqtt\Protocol\Message;
 
 class Reply
 {
     protected $parser;
-    function __construct(?BufferParser $bufferParser = null)
+    function __construct(?Message $bufferParser = null)
     {
         $this->parser = $bufferParser;
     }
