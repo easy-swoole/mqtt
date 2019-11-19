@@ -81,10 +81,13 @@ class Message extends SplBean
      */
     private $buffer;
 
+    protected $rawData;
+
 
     function __construct(string $buffer)
     {
-        parent::__construct([]);
+        parent::__construct();
+        $this->rawData = $buffer;
         $this->buffer = $buffer;
         $this->decodeFixedHeader();
         switch ($this->command){
@@ -383,6 +386,11 @@ class Message extends SplBean
     public function setConnectInfo(array $connectInfo): void
     {
         $this->connectInfo = $connectInfo;
+    }
+
+    public function getRawData()
+    {
+        return $this->rawData;
     }
 
     public static function byteToBit(string $byte)

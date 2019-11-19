@@ -20,6 +20,11 @@ class ConAck extends Reply
         $this->flag = $flag;
     }
 
+    function getFlag()
+    {
+        return $this->flag;
+    }
+
     function __toString()
     {
        return chr(0x20) . chr(0x02) . chr(0) . chr($this->flag);
