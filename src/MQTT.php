@@ -50,7 +50,7 @@ class MQTT
                         return;
                     }
                 }
-                $reply = $this->event()->hook($message->getCommand(),$message,$server,$fd);
+                $reply = $this->event()->hook($message->getCommand(),$message,$fd);
                 if($reply instanceof Reply){
                     if(($message instanceof ConAck) && ($message->getFlag() == $message::ACCEPT)){
                         $this->clientInfo->set($fd,['auth'=>1]);

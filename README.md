@@ -1,6 +1,8 @@
 ## 测试服务端
 ```
 use EasySwoole\MQTT\MQTT;
+use EasySwoole\MQTT\Event;
+use EasySwoole\MQTT\Protocol\Message;
 
 $server = new swoole_server("127.0.0.1", 9600);
 
@@ -9,6 +11,14 @@ $server->set([
 ]);
 
 $mqtt = new MQTT();
+/*
+ * 事件注册
+ */
+$mqtt->event()->set(Event::CONNECT,function (Message $message,int $fd){
+    /*
+     * 若握手成功返回Reply
+     */
+});
 
 $mqtt->attachServer($server);
 
