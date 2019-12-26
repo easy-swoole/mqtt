@@ -22,7 +22,7 @@ class Message extends SplBean
         UNSUBSCRIBE 	10 	C->S 	取消订阅
         UNSUBACK 	11 	S->C 	取消订阅确认
         PING 	12 	C->S 	客户端发送PING(连接保活)命令
-        PINGRSP 	13 	S->C 	PING命令回复
+        PINGRESP 	13 	S->C 	PING命令回复
         DISCONNECT 	14 	C->S 	断开连接
      */
     const CONNECT = 1;
