@@ -12,15 +12,21 @@ use Swoole\Table;
 
 class MQTT
 {
+    /** @var EventInterface */
     private $event;
-    private $clientInfo;
+    /** @var CacheInterface */
+    private $cache;
 
-    function __construct(EventInterface $event,int $tableSize = 1024 * 128)
+    function setCache(CacheInterface $cache):MQTT
+    {
+        $this->cache = $cache;
+        return $this;
+    }
+
+    function setEvent(EventInterface $event):MQTT
     {
         $this->event = $event;
-        $this->clientInfo = new Table($tableSize);
-        $this->clientInfo->column('auth', Table::TYPE_INT, 1);
-        $this->clientInfo->create();
+        return $this;
     }
 
     /**
@@ -31,6 +37,9 @@ class MQTT
         $server->set([
             'open_mqtt_protocol' => true
         ]);
+        /*
+         * 启动前检查event和cache 是否设置
+         */
         $server->on('receive', function (Server $server, $fd, $reactorId, $data) {
             $message = new Message($data);
             if ($message->getCommand()) {
@@ -41,7 +50,7 @@ class MQTT
                         $this->connect($server, $fd, $reactorId, $message);
                     }
                 } else {
-                    $info = $this->clientInfo->get($fd);
+                    $info = $this->cache->get($fd);
                     if (empty($info)) {
                         return;
                     }
