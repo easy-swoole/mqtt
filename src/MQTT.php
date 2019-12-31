@@ -15,17 +15,12 @@ class MQTT
     private $event;
     private $clientInfo;
 
-    function __construct(int $tableSize = 1024 * 128)
+    function __construct(EventInterface $event,int $tableSize = 1024 * 128)
     {
-        $this->event = new Event();
+        $this->event = $event;
         $this->clientInfo = new Table($tableSize);
         $this->clientInfo->column('auth', Table::TYPE_INT, 1);
         $this->clientInfo->create();
-    }
-
-    function event(): Event
-    {
-        return $this->event;
     }
 
     /**
@@ -41,7 +36,7 @@ class MQTT
             if ($message->getCommand()) {
                 $reply = null;
                 if ($message->getCommand() === Message::CONNECT) {
-                    $reply = $this->event()->hook(Event::CONNECT, $message, $fd);
+                    $reply = $this->event->onConnect( $message, $fd);
                     if ($reply instanceof Reply) {
                         $this->connect($server, $fd, $reactorId, $message);
                     }
