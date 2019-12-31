@@ -4,25 +4,34 @@
 namespace EasySwoole\MQTT;
 
 
+use Swoole\Table;
+
 class TableCache implements CacheInterface
 {
-
-    function __construct(int $size)
+    private $table;
+    function __construct(int $size = 1024 * 128)
     {
+        $this->table = new Table($size);
+        $this->table->column('data', Table::TYPE_STRING, 128);
+        $this->table->create();
     }
 
     function set(string $key, $data)
     {
-        // TODO: Implement set() method.
+        return $this->table->set($key,['data'=>serialize($data)]);
     }
 
     function get(string $key)
     {
-        // TODO: Implement get() method.
+        $info = $this->table->get($key);
+        if($info){
+            return unserialize($info['data']);
+        }
+        return null;
     }
 
     function delete(string $key)
     {
-        // TODO: Implement delete() method.
+        return $this->table->del($key);
     }
 }
