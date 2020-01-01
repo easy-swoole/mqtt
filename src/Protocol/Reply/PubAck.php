@@ -1,8 +1,5 @@
 <?php
-
-
 namespace EasySwoole\MQTT\Protocol\Reply;
-
 
 class PubAck extends Reply
 {
