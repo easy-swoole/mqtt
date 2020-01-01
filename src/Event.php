@@ -4,7 +4,6 @@ namespace EasySwoole\MQTT;
 use EasySwoole\MQTT\Protocol\Message;
 use EasySwoole\MQTT\Protocol\Reply\ConAck;
 use EasySwoole\MQTT\Protocol\Reply\PingResp;
-use EasySwoole\MQTT\Protocol\Reply\PubComp;
 use EasySwoole\MQTT\Protocol\Reply\PubAck;
 use EasySwoole\MQTT\Protocol\Reply\SubAck;
 use EasySwoole\MQTT\Protocol\Reply\UnSubAck;
@@ -16,6 +15,7 @@ class Event implements EventInterface
     {
         // TODO: Implement onConnect() method.
         var_dump('connection');
+        var_dump($message->getConnectInfo());
         return new ConAck($message);
     }
 
@@ -24,13 +24,6 @@ class Event implements EventInterface
         // TODO: Implement onPublish() method.
         var_dump('onPublish');
         return new PubAck($message);
-    }
-
-    public function onPubrel(Message $message, int $fd): PubComp
-    {
-        // TODO: Implement onPubrel() method.
-        var_dump('onPubrel');
-        return new PubComp($message);
     }
 
     public function onSubscribe(Message $message, int $fd): SubAck

@@ -4,6 +4,7 @@ namespace EasySwoole\MQTT;
 
 use EasySwoole\MQTT\Protocol\Message;
 use EasySwoole\MQTT\Protocol\Reply\ConAck;
+use EasySwoole\MQTT\Protocol\Reply\PubComp;
 use EasySwoole\MQTT\Protocol\Reply\Reply;
 use Swoole\Server;
 use Swoole\Table;
@@ -57,7 +58,7 @@ class MQTT
 
                         break;
                     case Message::PUBREL:
-                        $reply = $this->event->onPubrel( $message, $fd);
+                        $reply = new PubComp($message);
                         break;
                     case Message::PUBCOMP:
 
