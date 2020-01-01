@@ -45,7 +45,57 @@ class MQTT
                 $reply = null;
                 switch ($message->getCommand()) {
                     case Message::CONNECT:{
-                        $reply = $this->event->onConnect( $message, $fd);
+                        // 用户没有实现则默认ConAck
+                        if (empty($this->event)) {
+                            $reply = new ConAck($message);
+                        } else {
+                            $reply = $this->event->onConnect( $message, $fd);
+                        }
+
+                        $connctionInfo = $message->getConnectInfo();
+                        $clientId = $connctionInfo['clientId'];
+                        $protocolName = $connctionInfo['protocol'];
+                        $protocolLevel = $connctionInfo['version'];
+                        $reserved = $connctionInfo['reserved'];
+
+                        // 如果同一客户端重复连接则拒绝
+                        if ($this->cache->get($clientId)) {
+                            $reply->setFlag(ConAck::REFUSE_SERVER_UNAVAILABLE);
+                        }
+
+                        // 协议名称
+                        if ($protocolName !== 'MQTT') {
+                            $reply->setFlag(ConAck::REFUSE_PROTOCOL);
+                        }
+
+                        // 协议级别
+                        if ($protocolLevel !== 4) {
+                            $reply->setFlag(ConAck::REFUSE_PROTOCOL);
+                        }
+
+                        // 连接标志 Connect Flags
+                        if ($reserved !== 0) {
+                            $reply->setFlag(ConAck::REFUSE_PROTOCOL);
+                        }
+
+                        // TODO: Clean Session
+
+                        // TODO: Will Flag
+
+                        // TODO: Qos Will Qos
+
+                        // TODO: Will Retain
+
+                        // TODO: User Name Flag
+
+                        // TODO: Password Flag
+
+                        // TODO: Keep Alive
+
+                        // 连接成功则cache
+                        if ($reply->getFlag() === ConAck::ACCEPT) {
+                            $this->cache->set($clientId, []);
+                        }
                         break;
                     }
                     case Message::PUBLISH:

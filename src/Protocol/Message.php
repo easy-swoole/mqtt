@@ -174,6 +174,7 @@ class Message extends SplBean
         $info['willQos'] = ($byte & 0x18) >> 3;
         $info['willFlag'] = ($byte & 0x04);
         $info['cleanSession'] = ($byte & 0x02) >> 1;
+        $info['reserved'] = ($byte & 0x01);
         $keep_alive = $this->bufferPop(0, 2);
         $info['keepAlive'] = 256 * ord($keep_alive[0]) + ord($keep_alive[1]);
         $info['clientId'] = $this->bufferPop();
