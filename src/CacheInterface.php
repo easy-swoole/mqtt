@@ -1,8 +1,5 @@
 <?php
-
-
 namespace EasySwoole\MQTT;
-
 
 interface CacheInterface
 {

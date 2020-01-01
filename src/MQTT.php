@@ -1,11 +1,10 @@
 <?php
 
-
 namespace EasySwoole\MQTT;
-
 
 use EasySwoole\MQTT\Protocol\Message;
 use EasySwoole\MQTT\Protocol\Reply\ConAck;
+use EasySwoole\MQTT\Protocol\Reply\PubComp;
 use EasySwoole\MQTT\Protocol\Reply\Reply;
 use Swoole\Server;
 use Swoole\Table;
@@ -50,7 +49,7 @@ class MQTT
                         break;
                     }
                     case Message::PUBLISH:
-
+                        $reply = $this->event->onPublish( $message, $fd);
                         break;
                     case Message::PUBACK:
 
@@ -59,31 +58,35 @@ class MQTT
 
                         break;
                     case Message::PUBREL:
-
+                        $reply = new PubComp($message);
                         break;
                     case Message::PUBCOMP:
 
                         break;
                     case Message::SUBSCRIBE:
-
+                        $reply = $this->event->onSubscribe($message, $fd);
                         break;
                     case Message::SUBACK:
 
                         break;
                     case Message::UNSUBSCRIBE:
-
+                        $reply = $this->event->onUnsubscribe($message, $fd);
                         break;
                     case Message::UNSUBACK:
 
+                        break;
+                    case Message::PINGREQ:
+                        $reply = $this->event->onPingreq($message, $fd);
                         break;
                     case Message::PINGRESP:
 
                         break;
                     case Message::DISCONNECT:
-
+                        $reply = $this->event->onDisconnect($message, $fd);
                         break;
                 }
-                if($reply instanceof Reply){
+
+                if($reply instanceof Reply && !empty($reply->__toString())){
                     $server->send($fd,$reply->__toString());
                 }
 
