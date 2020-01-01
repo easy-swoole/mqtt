@@ -4,7 +4,13 @@
 namespace EasySwoole\MQTT;
 
 
-class Event extends \EasySwoole\Component\Event
+use EasySwoole\MQTT\Protocol\Message;
+use EasySwoole\MQTT\Protocol\Reply\ConAck;
+
+class Event implements EventInterface
 {
-    const CONNECT = 'CONNECT';
+    function onConnect(Message $message,int $fd): ConAck
+    {
+        // TODO: Implement onConnect() method.
+    }
 }

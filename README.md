@@ -1,3 +1,7 @@
+## 设计思路
+EventInterface 定义了MQTT的全部事件，而Event实现了这个接口，并实现了部分默认功能
+
+
 ## 测试服务端
 ```
 use EasySwoole\MQTT\MQTT;
