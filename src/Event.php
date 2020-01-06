@@ -15,7 +15,6 @@ class Event implements EventInterface
     {
         // TODO: Implement onConnect() method.
         var_dump('connection');
-        var_dump($message->getConnectInfo());
         return new ConAck($message);
     }
 
